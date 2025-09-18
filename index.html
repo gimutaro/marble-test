@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Rosebud × Spark — Interactive Splats Starter</title>
+  <link rel="stylesheet" href="./src/styles/main.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.174.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.174.0/examples/jsm/",
+      "@sparkjsdev/spark": "https://sparkjs.dev/releases/spark/0.1.8/spark.module.js",
+      "@rapier3d-compat": "https://cdn.skypack.dev/@dimforge/rapier3d-compat"
+    }
+  }
+  </script>
+</head>
+<body style="overflow: hidden;">
+  <div id="loading">Loading scene…</div>
+  <div id="canvas-hint">Click anywhere to resume</div>
+
+  <div id="crosshair">
+    <div class="crosshair-dot"></div>
+    <div class="crosshair-lines">
+      <div class="crosshair-line crosshair-horizontal"></div>
+      <div class="crosshair-line crosshair-vertical"></div>
+    </div>
+  </div>
+
+  <div id="camera-info" class="hidden">
+    <h3>Position</h3>
+    <div class="coord-grid">
+      <div class="coord-item">
+        <div class="coord-label">X</div>
+        <div class="coord-value" id="cam-x">0.00</div>
+      </div>
+      <div class="coord-item">
+        <div class="coord-label">Y</div>
+        <div class="coord-value" id="cam-y">0.00</div>
+      </div>
+      <div class="coord-item">
+        <div class="coord-label">Z</div>
+        <div class="coord-value" id="cam-z">0.00</div>
+      </div>
+    </div>
+    
+    <h3>Rotation</h3>
+    <div class="coord-grid">
+      <div class="coord-item">
+        <div class="coord-label">X</div>
+        <div class="coord-value" id="cam-rx">0.00</div>
+      </div>
+      <div class="coord-item">
+        <div class="coord-label">Y</div>
+        <div class="coord-value" id="cam-ry">0.00</div>
+      </div>
+      <div class="coord-item">
+        <div class="coord-label">Z</div>
+        <div class="coord-value" id="cam-rz">0.00</div>
+      </div>
+    </div>
+    
+    <button id="copy-camera-btn">Copy <kbd>Ctrl</kbd>+<kbd>C</kbd></button>
+    <button id="hide-ui-btn">Hide UI <kbd>Ctrl</kbd>+<kbd>H</kbd></button>
+  </div>
+  <!-- Floating Action Button to show UI on mobile -->
+  <div id="show-ui-fab" role="button" aria-label="Show UI">
+    <svg viewBox="0 0 20 20" fill="currentColor" width="24" height="24">
+      <path fill-rule="evenodd" d="M4.25 2A2.25 2.25 0 002 4.25v11.5A2.25 2.25 0 004.25 18h11.5A2.25 2.25 0 0018 15.75V4.25A2.25 2.25 0 0015.75 2H4.25zm0 1.5h11.5a.75.75 0 01.75.75v2.5H3.5v-2.5a.75.75 0 01.75-.75zm0 4.5h13v7.25a.75.75 0 01-.75.75H4.25a.75.75 0 01-.75-.75V8z" clip-rule="evenodd" />
+    </svg>
+  </div>
+
+  <!-- Audio Control -->
+  <div id="audio-control">
+    <button id="mute-btn" class="audio-btn" title="Toggle Audio">
+      <svg class="audio-icon unmuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="11 6 6 9 2 9 2 15 6 15 11 18 11 6"></polygon>
+        <path d="M19.07 5.93a10 10 0 0 1 0 12.14M15.54 9.46a5 5 0 0 1 0 5.08"></path>
+      </svg>
+      <svg class="audio-icon muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="11 6 6 9 2 9 2 15 6 15 11 18 11 6"></polygon>
+        <line x1="23" y1="9" x2="17" y2="15"></line>
+        <line x1="17" y1="9" x2="23" y2="15"></line>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Start overlay -->
+  <div id="ui">
+    <div id="panel">
+      <h1>Click anywhere to play</h1>
+      <p>
+        <span class="desktop-controls">Controls: <kbd>WASD</kbd> move, <kbd>R/F</kbd> up/down, mouse look.<br>Press <kbd>Ctrl</kbd>+<kbd>H</kbd> to toggle camera coordinates.</span>
+        <span class="mobile-controls">Controls: Use joystick to move, drag screen to look. Tap character hints to chat.</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- Mobile Movement Controls (enabled by body.is-mobile) -->
+  <div id="mobile-controls">
+    <div class="virtual-joystick" id="movement-joystick">
+      <div class="joystick-base">
+        <div class="joystick-knob" id="movement-knob"></div>
+      </div>
+    </div>
+    <div class="vertical-controls">
+      <button class="vertical-btn" id="up-btn" data-direction="up">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M18 15l-6-6-6 6"/>
+        </svg>
+      </button>
+      <button class="vertical-btn" id="down-btn" data-direction="down">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Desktop WASD Controls Indicator -->
+  <div id="desktop-wasd-controls">
+    <div class="wasd-container">
+      <div class="wasd-main">
+        <div class="wasd-row"><div class="wasd-key" data-key="KeyW"><span>W</span></div></div>
+        <div class="wasd-row">
+          <div class="wasd-key" data-key="KeyA"><span>A</span></div>
+          <div class="wasd-key" data-key="KeyS"><span>S</span></div>
+          <div class="wasd-key" data-key="KeyD"><span>D</span></div>
+        </div>
+      </div>
+      <div class="wasd-vertical">
+        <div class="wasd-key" data-key="KeyR">↑</div>
+        <div class="wasd-key" data-key="KeyF">↓</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+  <script src="https://storage.googleapis.com/rosebud_staticfiles/ChatManager.js"></script>
+</body>
+</html>
